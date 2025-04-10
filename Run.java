@@ -12,10 +12,9 @@ public class Run extends JFrame {
 	private static final String settingsPath = "settings.txt";
 	private static String bgImagePath;
 	private static int locationX, locationY;
-	private static boolean isRunning = true;
 	private static int sleepTime;
 	private static int moveSpeed;
-
+	private static boolean isSleepEnabled;
 	public Run() {
 		loadSettings();
 		addController();
@@ -50,6 +49,9 @@ public class Run extends JFrame {
 							case "moveSpeed":
 								moveSpeed = Integer.parseInt(value);
 								break;
+							case "isSleepEnabled":
+								isSleepEnabled = Boolean.parseBoolean(value);
+								break;
 						}
 					}
 				}
@@ -75,6 +77,7 @@ public class Run extends JFrame {
 		locationY = 500; // default y location
 		sleepTime = 60; // default sleep time
 		moveSpeed = 1; // default step move
+		isSleepEnabled = false; // default sleep disabled
 	}
 	
 	private void saveSettings() {
@@ -98,6 +101,8 @@ public class Run extends JFrame {
 			bw.write("sleepTime=" + sleepTime);
 			bw.newLine();
 			bw.write("moveSpeed=" + moveSpeed);
+			bw.newLine();
+			bw.write("isSleepEnabled=" + isSleepEnabled);
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
@@ -140,17 +145,44 @@ public class Run extends JFrame {
 					});
 					popup.add(closeItem);
 					
-					JMenuItem disableSleepItem = new JMenuItem("Enable Sleep");
+					JMenuItem disableSleepItem = new JMenuItem();
+					if (!isSleepEnabled) {
+						disableSleepItem.setText("Enable Sleep");
+					} else {
+						disableSleepItem.setText("Disable Sleep");
+					}
 					disableSleepItem.addActionListener(f -> {
-						isRunning = !isRunning;
-						if (isRunning) {
-							disableSleepItem.setText("Enable Sleep");
-						} else {
-							disableSleepItem.setText("Disable Sleep");
-						}
-						popup.show(getContentPane(), e.getX(), e.getY());
+						isSleepEnabled = !isSleepEnabled;
 					});
 					popup.add(disableSleepItem);
+					
+					// add a menu item to change the background image
+					JMenuItem changeBgItem = new JMenuItem("Change Background Image");
+					changeBgItem.addActionListener(f -> {
+						// open a file chooser to select a new background image
+						JFileChooser fileChooser = new JFileChooser();
+						fileChooser.setDialogTitle("Select Background Image");
+						fileChooser.setFileSelectionMode(JFileChooser.FILES_ONLY);
+						// set file filter to only show image files
+						fileChooser.setAcceptAllFileFilterUsed(false);
+						fileChooser.addChoosableFileFilter(new javax.swing.filechooser.FileNameExtensionFilter("Image files", "jpg", "png", "gif"));
+						int result = fileChooser.showOpenDialog(null);
+						if (result == JFileChooser.APPROVE_OPTION) {
+							java.io.File selectedFile = fileChooser.getSelectedFile();
+							if (selectedFile == null || !selectedFile.exists()) {
+								JOptionPane.showMessageDialog(null, "Invalid file selected", "Error", JOptionPane.ERROR_MESSAGE);
+								return;
+							}
+							if (bgImagePath.equals(selectedFile.getAbsolutePath())) {
+								JOptionPane.showMessageDialog(null, "Selected image is already set as background", "Error", JOptionPane.ERROR_MESSAGE);
+								return;
+							}
+							bgImagePath = selectedFile.getAbsolutePath();
+							setImageBackground(bgImagePath);
+							saveSettings();
+						}
+					});
+					popup.add(changeBgItem);
 					
 					popup.show(getContentPane(), e.getX(), e.getY());
 				} else {
@@ -176,7 +208,7 @@ public class Run extends JFrame {
 		Robot robot = new Robot();
 		while (true) {
 			robot.delay(1000*sleepTime); // 1 minute delay
-			if (!isRunning) {
+			if (isSleepEnabled) {
 				continue;
 			}
 			PointerInfo a = MouseInfo.getPointerInfo();
